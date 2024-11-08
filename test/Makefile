@@ -1,4 +1,6 @@
-include ../Makefile
+include ../build.mk
+
+OUTPUT_DIR_TEST = ../$(OUTPUT_DIR)
 
 
 SUBDIRS_TEST := test
@@ -10,6 +12,5 @@ all: $(SUBDIRS_TEST)
 
 
 test:
-	mkdir -p $(OUTPUT_DIR)
-	clang -c kernel.c $(INCLUDE_DIR) $(CLANG_FLAGS) -o $(OUTPUT_DIR)/kernel.o
-	gcc user.c $(INCLUDE_DIR) $(LIBRARY_DIR) $(C_FLAGS) -o $(OUTPUT_DIR)/user
+	clang -c kernel.c $(INCLUDE_DIR) $(CLANG_FLAGS) -o $(OUTPUT_DIR_TEST)/kernel.o
+	gcc user.c $(INCLUDE_DIR) $(LIBRARY_DIR) $(C_FLAGS) -o $(OUTPUT_DIR_TEST)/user
