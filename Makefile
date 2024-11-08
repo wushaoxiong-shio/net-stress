@@ -1,7 +1,7 @@
 include build.mk
 
 
-SUBDIRS := test
+SUBDIRS := test kprobe
 
 
 .PHONY: all
