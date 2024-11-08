@@ -9,7 +9,7 @@ INCLUDE_DIR = \
 LIBRARY_DIR = \
 	-L/root/code/linux-6.1.115/tools/lib/bpf/ \
 
-
+OUTPUT_DIR = build
 
 SUBDIRS := test
 
