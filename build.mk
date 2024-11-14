@@ -14,3 +14,4 @@ LIBRARY_DIR = \
 
 OUTPUT_DIR = build
 
+BPFTOOL = /root/code/linux-6.1.115/tools/bpf/bpftool/bpftool

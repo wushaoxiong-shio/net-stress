@@ -7,4 +7,5 @@ compile_commands.json
 *.o
 *.so
 *.a
-*.out
+
+*.skel.h
