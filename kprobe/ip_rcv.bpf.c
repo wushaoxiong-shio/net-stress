@@ -1,5 +1,3 @@
-#define __TARGET_ARCH_x86_64
-
 #include "vmlinux.h"
 
 #include <bpf/bpf_helpers.h>
