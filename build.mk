@@ -1,4 +1,4 @@
-CLANG_FLAGS = -g -O2 -target bpf -D__TARGET_ARCH_X86
+CLANG_FLAGS = -g -O2 -target bpf -D__TARGET_ARCH_x86
 C_FLAGS     = -g -O2 -lbpf
 
 kernel_version = 6.1.115
