@@ -4,6 +4,7 @@
 #include <bpf/bpf_tracing.h>
 #include <bpf/bpf_core_read.h>
 
+
 struct {
     __uint(type, BPF_MAP_TYPE_ARRAY);
     __uint(max_entries, 1);
@@ -13,19 +14,18 @@ struct {
 
 
 SEC("kprobe/ip_rcv")
-int BPF_KPROBE(ip_rcv)
+int BPF_KPROBE(ip_rcv, struct sk_buff *skb)
 {
 
     unsigned int key = 0;
     unsigned int initial_value = 0;
 
-    // 从映射中读取当前值
-    unsigned int *value = bpf_map_lookup_elem(&ip_rcv_map, &key);
+    bpf_probe_read(&initial_value, sizeof(initial_value), &skb->truesize);
 
-    if (value) // 增量计数
-        __sync_fetch_and_add(value, 1);
-    else // 初始化值
-        bpf_map_update_elem(&ip_rcv_map, &key, &initial_value, BPF_ANY);
+    // cat /sys/kernel/debug/tracing/trace_pipe
+    bpf_printk("skb->truesize: %u\n", initial_value);
+
+    int ret = bpf_map_update_elem(&ip_rcv_map, &key, &initial_value, BPF_ANY);
 
     return 0;
 }

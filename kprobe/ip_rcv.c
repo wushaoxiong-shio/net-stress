@@ -65,7 +65,7 @@ int main()
 	while (!stop)
     {
 		fprintf(stderr, ".");
-		sleep(1);
+		usleep(50 * 1000);
 
         unsigned int value;
         unsigned int key = 0;
