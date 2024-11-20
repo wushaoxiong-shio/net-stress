@@ -1,11 +1,10 @@
-#include "ip_rcv.skel.h"
+#include "tcp_v4_rcv.skel.h"
 
 #include <stdio.h>
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
-#include <sys/resource.h>
 #include <bpf/libbpf.h>
 #include <bpf/bpf.h>
 
@@ -30,18 +29,18 @@ void print_ip(__be32 ip)
 
 int main()
 {
-    struct ip_rcv *skel;
+    struct tcp_v4_rcv *skel;
 	int err, map_fd;
 
     libbpf_set_print(libbpf_print_fn);
 
-    skel = ip_rcv__open_and_load();
+    skel = tcp_v4_rcv__open_and_load();
 	if (!skel) {
 		fprintf(stderr, "Failed to open BPF skeleton\n");
 		return 1;
 	}
 
-    err = ip_rcv__attach(skel);
+    err = tcp_v4_rcv__attach(skel);
 	if (err) {
 		fprintf(stderr, "Failed to attach BPF skeleton\n");
 		goto cleanup;
@@ -52,7 +51,7 @@ int main()
 		goto cleanup;
 	}
 
-    map_fd = bpf_object__find_map_fd_by_name(skel->obj, "ip_rcv_map");
+    map_fd = bpf_object__find_map_fd_by_name(skel->obj, "tcp_v4_rcv_map");
     if (map_fd < 0)
     {
         perror("Failed to find map by name");
@@ -64,21 +63,19 @@ int main()
 
 	while (!stop)
     {
-		fprintf(stderr, ".");
 		usleep(50 * 1000);
 
         unsigned int value;
         unsigned int key = 0;
 
-        // 读取 map 中的计数值
         if (bpf_map_lookup_elem(map_fd, &key, &value) == 0)
-            printf("Packets received via ip_rcv: %d\n", value);
+            printf("tcp_v4_rcv tcph.source: %d\n", value);
         else
             fprintf(stderr, "Error reading counter from map: %s\n", strerror(errno));
 
 	}
 
 cleanup:
-	ip_rcv__destroy(skel);
+	tcp_v4_rcv__destroy(skel);
 	return -err;
 }
