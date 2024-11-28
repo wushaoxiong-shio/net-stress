@@ -1,7 +1,7 @@
 CLANG_FLAGS = -g -O2 -target bpf -D__TARGET_ARCH_x86
 C_FLAGS     = -g -O2 -lbpf
 
-kernel_version = 6.1.115
+kernel_version = `uname -r`
 
 
 INCLUDE_DIR = \
@@ -14,4 +14,4 @@ LIBRARY_DIR = \
 
 OUTPUT_DIR = build
 
-BPFTOOL = /root/code/linux-6.1.115/tools/bpf/bpftool/bpftool
+BPFTOOL = /root/code/linux-$(kernel_version)/tools/bpf/bpftool/bpftool
