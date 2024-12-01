@@ -12,6 +12,6 @@ compile_commands.json
 
 kernel_module/*
 !kernel_module/Makefile
-!kernel_module/*.c
+!kernel_module/*_kernel.c
 !kernel_module/*.cc
 !kernel_module/*.h

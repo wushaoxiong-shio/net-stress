@@ -1,20 +1,9 @@
 
 OUTPUT_DIR = ../build
-kernel_version = `uname -r`
+kernel_version = $(shell uname -r)
 BPF_TOOLS_DIR=/root/code/linux-$(kernel_version)/tools/bpf/
 
 SUBDIRS_KERNEL_MODULE := kernel_module create_socket
-
-
-obj-m += send_to_socket.o
-create_socket:
-	@g++ create_socket.cc -o $(OUTPUT_DIR)/create_socket
-
-
-
-
-
-
 
 .PHONY: all
 all: $(SUBDIRS_KERNEL_MODULE)
@@ -25,4 +14,9 @@ clean:
 
 kernel_module:
 	@make -j8 -C /root/code/linux-$(kernel_version)/ M=`pwd` 
+
+
+obj-m += send_to_socket_kernel.o
+create_socket:
+	@g++ create_socket.cc -o $(OUTPUT_DIR)/create_socket
 

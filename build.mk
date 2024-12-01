@@ -1,7 +1,7 @@
 CLANG_FLAGS = -g -O2 -target bpf -D__TARGET_ARCH_x86
 C_FLAGS     = -g -O2 -lbpf
 
-kernel_version = `uname -r`
+kernel_version = $(shell uname -r)
 
 
 INCLUDE_DIR = \
