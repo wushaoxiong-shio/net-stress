@@ -26,7 +26,7 @@ int main()
     struct bpf_link *link;
     int err, map_fd;
 
-    const char *filename = "kernel.o";
+    const char *filename = "test/test.o";
     const char *program_name = "bpf_test";
     const char *func_name = "ip_rcv";
 

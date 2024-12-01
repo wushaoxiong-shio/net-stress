@@ -10,7 +10,11 @@ SUBDIRS_TEST := test
 .PHONY: all
 all: $(SUBDIRS_TEST)
 
+.PHONY: clean
+clean:
+	@rm -f *.o *.skel.h
+
 
 test:
-	@clang -c kernel.c $(INCLUDE_DIR) $(CLANG_FLAGS) -o $(OUTPUT_DIR_TEST)/kernel.o
-	@gcc user.c $(INCLUDE_DIR) $(LIBRARY_DIR) $(C_FLAGS) -o $(OUTPUT_DIR_TEST)/user
+	@clang -c test.bpf.c $(INCLUDE_DIR) $(CLANG_FLAGS) -o test.o
+	@gcc test.c $(INCLUDE_DIR) $(LIBRARY_DIR) $(C_FLAGS) -o $(OUTPUT_DIR_TEST)/test

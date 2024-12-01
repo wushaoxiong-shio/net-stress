@@ -1,15 +1,14 @@
 include build.mk
 
 
-SUBDIRS := test kprobe
+SUBDIRS := test kprobe bcc
 
 
 .PHONY: all
-all: $(SUBDIRS)
+all:
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir; done
 
-
-.PHONY: $(SUBDIRS)
-$(SUBDIRS):
-	@mkdir -p $(OUTPUT_DIR)
-	@$(MAKE) -C $@ 
-
+.PHONY: all
+clean:
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
+	@rm -r build/*
