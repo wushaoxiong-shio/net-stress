@@ -13,7 +13,7 @@ clean:
 	@make clean -C /root/code/linux-$(kernel_version)/ M=`pwd`
 
 kernel_module:
-	@make -j8 -C /root/code/linux-$(kernel_version)/ M=`pwd` 
+	@make -C /root/code/linux-$(kernel_version)/ M=`pwd` 
 
 
 obj-m += send_to_socket_kernel.o
