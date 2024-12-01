@@ -1,7 +1,7 @@
 include build.mk
 
 
-SUBDIRS := test kprobe bcc
+SUBDIRS := test kernel_module bcc
 
 
 .PHONY: all

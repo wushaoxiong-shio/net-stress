@@ -9,3 +9,9 @@ compile_commands.json
 *.a
 
 *.skel.h
+
+kernel_module/*
+!kernel_module/Makefile
+!kernel_module/*.c
+!kernel_module/*.cc
+!kernel_module/*.h
