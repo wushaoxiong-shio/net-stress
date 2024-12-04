@@ -6,9 +6,10 @@ SUBDIRS := test kernel_module bcc
 
 .PHONY: all
 all:
+	@mkdir -p $(OUTPUT_DIR)
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir; done
 
-.PHONY: all
+.PHONY: clean
 clean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
-	@rm -r build/*
+	@rm -rf $(OUTPUT_DIR)
