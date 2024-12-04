@@ -3,9 +3,7 @@
 #include "net/netns/generic.h"
 #include "net/udp.h"
 #include <linux/module.h>
-#include <linux/sched.h>
 #include <linux/fs.h>
-#include <linux/uaccess.h>
 #include <linux/kernel.h>
 #include <net/sock.h>
 #include <linux/socket.h>
@@ -67,27 +65,28 @@ int send_msg_to_socket(void)
     }
 
     struct msghdr msg;
-    struct iovec iov;
+    struct kvec kvec;
     struct sockaddr_in dest_addr;
 
     memset(&msg, 0, sizeof(msg));
-    memset(&iov, 0, sizeof(iov));
+    memset(&kvec, 0, sizeof(kvec));
     memset(&dest_addr, 0, sizeof(dest_addr));
 
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_port = htons(55440);
     dest_addr.sin_addr.s_addr = htonl(0x0C0CFED7); 
 
-    iov.iov_base = (void *)message;
-    iov.iov_len = strlen(message);
+    kvec.iov_base = (void *)message;
+    kvec.iov_len = strlen(message);
 
     msg.msg_name = (void *)&dest_addr;
     msg.msg_namelen = sizeof(dest_addr);
 
-    iov_iter_init(&msg.msg_iter, WRITE, &iov, 1, iov.iov_len);
+    iov_iter_kvec(&msg.msg_iter, READ, &kvec, 1, strlen(message));
 
-    int ret = udp_sendmsg(sk, &msg, strlen(message));
-    printk("ret:%d\n", ret);
+    struct inet_sock *inet = inet_sk(sk);
+    inet->inet_sport = htons(5577);
+    udp_sendmsg(sk, &msg, strlen(message));
 
     return 0;
 }
