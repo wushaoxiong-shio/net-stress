@@ -1,7 +1,7 @@
 include build.mk
 
 
-SUBDIRS := test kernel_module bcc
+SUBDIRS := test kernel_module bcc filter_hook
 
 
 .PHONY: all

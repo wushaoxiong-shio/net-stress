@@ -15,3 +15,7 @@ kernel_module/*
 !kernel_module/*_kernel.c
 !kernel_module/*.cc
 !kernel_module/*.h
+
+filter_hook/*
+!filter_hook/Makefile
+!filter_hook/filter_hook.c
