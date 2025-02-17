@@ -33,11 +33,9 @@ struct mlx5_flow_table* get_mlx5_root_table(int ifindex)
     return rft_array[ifindex];
 }
 
-
 static unsigned int get_mlx5e_hairpin_tir_num(struct mlx5e_priv *priv, int ifindex)
 {
     struct mlx5e_hairpin *hp;
-
     if (hp_array[ifindex])
         return hp_array[ifindex]->direct_tir.tirn;
 
@@ -64,59 +62,36 @@ static unsigned int get_mlx5e_hairpin_tir_num(struct mlx5e_priv *priv, int ifind
     params.num_channels = link_speed64;
 
     hp = mlx5e_hairpin_create(priv, &params, ifindex);
+    if (!hp)
+    {
+        printk("mlx5e_hairpin_create faild\n");
+        return 0;
+    }
 
     hp_array[ifindex] = hp;
     return hp_array[ifindex]->direct_tir.tirn;
 }
 
-struct mlx5_rule_data {
-    struct delayed_work work;
-    __be32 sip;
-    __be32 dip;
-    __be16 sport;
-    __be16 dport;
-    u_int8_t protonum;
-    unsigned char dmac[6];
-    struct net_device *in;
-    struct net_device *out;
-};
-
-
-void _add_conntrack_mlx5_rule(struct work_struct *work)
+unsigned int add_conntrack_mlx5_rule(
+    __be32 sip,
+    __be32 dip,
+    __be16 sport,
+    __be16 dport,
+    u_int8_t protonum,
+    unsigned char* dmac,
+    struct net_device *in,
+    struct net_device *out
+)
 {
-    printk("\t -- _add_conntrack_mlx5_rule \n");
-    struct mlx5_rule_data *data = container_of(work, struct mlx5_rule_data, work.work);
-    __be32 sip = data->sip;
-    __be32 dip = data->dip;
-    __be16 sport = data->sport;
-    __be16 dport = data->dport;
-    u_int8_t protonum = data->protonum;
-    unsigned char* dmac = data->dmac;
-    struct net_device *in = data->in;
-    struct net_device *out = data->out;
-
     struct mlx5e_priv *priv = netdev_priv(in);
     struct mlx5_flow_table* ft = get_mlx5_root_table(in->ifindex);
     if (!ft)
-        return;
+        return -1;
     
-    {
-        printk("sip:%x dip:%x sport:%d dport:%d protonum:%d dmac:%x%x%x%x%x%x out_index:%d in_index:%d",
-            sip, dip, sport, dport, protonum, dmac[0], dmac[1],dmac[2],dmac[3],dmac[4],dmac[5], out->ifindex, in->ifindex);
-        printk("\t--\t ft->id:%x\n", ft->id);
-        printk("\t--\t ft->ns:%x\n", ft->ns);
-        printk("\t--\t ft->level:%d\n", ft->level);
-        printk("\t--\t ft->max_fte:%d\n", ft->max_fte);
-        printk("\t--\t ft->type:%d\n", ft->type);
-        printk("\t--\t ft->flags:%u\n", ft->flags);
-        printk("\t--\t ft->vport:%u\n", ft->vport);
-    
-        printk("\t--\t ft->autogroup.active:%d\n", ft->autogroup.active);
-        printk("\t--\t ft->autogroup.group_size:%d\n", ft->autogroup.group_size);
-        printk("\t--\t ft->autogroup.num_groups:%d\n", ft->autogroup.num_groups);
-        printk("\t--\t ft->autogroup.max_fte:%d\n", ft->autogroup.max_fte);
-        printk("\t--\t ft->autogroup.required_groups:%d\n", ft->autogroup.required_groups);
-    }
+    printk("sip:%x dip:%x sport:%d dport:%d protonum:%d dmac:%x%x%x%x%x%x in_index:%d out_index:%d",
+        sip, dip, sport, dport, protonum, dmac[0], dmac[1],dmac[2],dmac[3],dmac[4],dmac[5], in->ifindex, out->ifindex);
+    printk("\t- ft->id:%x\n", ft->id);
+    printk("\t- ft->ns:%lx\n", (unsigned long)ft->ns);
 
     struct mlx5_flow_act flow_act = {};
     flow_act.action = MLX5_FLOW_CONTEXT_ACTION_COUNT | MLX5_FLOW_CONTEXT_ACTION_FWD_DEST | MLX5_FLOW_CONTEXT_ACTION_MOD_HDR;
@@ -134,7 +109,6 @@ void _add_conntrack_mlx5_rule(struct work_struct *work)
     MLX5_SET(fte_match_set_lyr_2_4, headers_v, ip_version, 4);
     MLX5_SET(fte_match_set_lyr_2_4, headers_c, cvlan_tag, 1);
     
-
     MLX5_SET_TO_ONES(fte_match_set_lyr_2_4, headers_c, src_ipv4_src_ipv6.ipv4_layout.ipv4);
     memcpy(MLX5_ADDR_OF(fte_match_set_lyr_2_4, headers_v, src_ipv4_src_ipv6.ipv4_layout.ipv4), &sip, sizeof(sip));
     MLX5_SET_TO_ONES(fte_match_set_lyr_2_4, headers_c, dst_ipv4_dst_ipv6.ipv4_layout.ipv4);
@@ -142,7 +116,6 @@ void _add_conntrack_mlx5_rule(struct work_struct *work)
 
     MLX5_SET_TO_ONES(fte_match_set_lyr_2_4, headers_c, ip_protocol);
     memcpy(MLX5_ADDR_OF(fte_match_set_lyr_2_4, headers_v, ip_protocol), &protonum, sizeof(protonum));
-
     switch (protonum)
     {
         case IPPROTO_TCP: 
@@ -163,7 +136,6 @@ void _add_conntrack_mlx5_rule(struct work_struct *work)
         }
         default: break;
     }
-    
 
     void *modify_actions = kcalloc(1, MLX5_MH_ACT_SZ * 3, GFP_KERNEL);
     memset(modify_actions, 0, MLX5_MH_ACT_SZ * 3);
@@ -185,7 +157,7 @@ void _add_conntrack_mlx5_rule(struct work_struct *work)
     if (IS_ERR(flow_act.modify_hdr))
     {
         printk("mlx5_modify_header_alloc failed: %ld\n", PTR_ERR(flow_act.modify_hdr));
-        return;
+        return -2;
     }
 
     dest[0].type = MLX5_FLOW_DESTINATION_TYPE_TIR;
@@ -193,47 +165,15 @@ void _add_conntrack_mlx5_rule(struct work_struct *work)
     dest[1].type = MLX5_FLOW_DESTINATION_TYPE_COUNTER;
     dest[1].counter_id = mlx5_fc_id(fc);
 
-    printk("dest[0].tir_num:%d\n", dest[0].tir_num);
     struct mlx5_flow_handle *rule = mlx5_add_flow_rules(ft, &spec, &flow_act, dest, 2);
     if (IS_ERR(rule))
     {
         printk("\t mlx5_add_flow_rules faild - %ld\n", PTR_ERR(rule));
-        return;
+        return -3;
     }
-    printk("\t mlx5_add_flow_rules - %lx\n", PTR_ERR(rule));
-    return;
-}
-EXPORT_SYMBOL(_add_conntrack_mlx5_rule);
-
-
-unsigned int add_conntrack_mlx5_rule(
-    __be32 sip,
-    __be32 dip,
-    __be16 sport,
-    __be16 dport,
-    u_int8_t protonum,
-    unsigned char* dmac,
-    struct net_device *in,
-    struct net_device *out
-)
-{
-    printk("\t -- add_conntrack_mlx5_rule \n");
-    struct mlx5_rule_data *data = kmalloc(sizeof(struct mlx5_rule_data), GFP_KERNEL);
-    data->sip = sip;
-    data->dip = dip;
-    data->sport = sport;
-    data->dport = dport;
-    data->protonum = protonum;
-    memcpy(data->dmac, dmac, 6);
-    data->in = in;
-    data->out = out;
-
-    INIT_DELAYED_WORK(&data->work, _add_conntrack_mlx5_rule);
-    schedule_delayed_work(&data->work, 1 * HZ);
     return 0;
 }
 EXPORT_SYMBOL(add_conntrack_mlx5_rule);
-
 
 void init_root_table(void)
 {
