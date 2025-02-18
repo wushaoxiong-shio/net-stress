@@ -80,18 +80,24 @@ unsigned int add_conntrack_mlx5_rule(
     u_int8_t protonum,
     unsigned char* dmac,
     struct net_device *in,
-    struct net_device *out
+    struct net_device *out,
+    void **ct_table,
+    void **ct_rule,
+    void **ct_fc
 )
 {
     struct mlx5e_priv *priv = netdev_priv(in);
     struct mlx5_flow_table* ft = get_mlx5_root_table(in->ifindex);
     if (!ft)
+    {
+        printk("\t - get_mlx5_root_table faild\n");
         return -1;
+    }
     
-    printk("sip:%x dip:%x sport:%d dport:%d protonum:%d dmac:%x%x%x%x%x%x in_index:%d out_index:%d",
-        sip, dip, sport, dport, protonum, dmac[0], dmac[1],dmac[2],dmac[3],dmac[4],dmac[5], in->ifindex, out->ifindex);
-    printk("\t- ft->id:%x\n", ft->id);
-    printk("\t- ft->ns:%lx\n", (unsigned long)ft->ns);
+    // printk("sip:%x dip:%x sport:%d dport:%d protonum:%d dmac:%x%x%x%x%x%x in_index:%d out_index:%d",
+    //     sip, dip, sport, dport, protonum, dmac[0], dmac[1],dmac[2],dmac[3],dmac[4],dmac[5], in->ifindex, out->ifindex);
+    // printk("\t - ft->id:%x\n", ft->id);
+    // printk("\t - ft->ns:%lx\n", (unsigned long)ft->ns);
 
     struct mlx5_flow_act flow_act = {};
     flow_act.action = MLX5_FLOW_CONTEXT_ACTION_COUNT | MLX5_FLOW_CONTEXT_ACTION_FWD_DEST | MLX5_FLOW_CONTEXT_ACTION_MOD_HDR;
@@ -171,9 +177,27 @@ unsigned int add_conntrack_mlx5_rule(
         printk("\t mlx5_add_flow_rules faild - %ld\n", PTR_ERR(rule));
         return -3;
     }
+
+    *ct_fc = fc;
+    *ct_table = ft;
+    *ct_rule = rule;
     return 0;
 }
 EXPORT_SYMBOL(add_conntrack_mlx5_rule);
+
+void del_conntrack_mlx5_rule(struct mlx5_flow_handle *handle)
+{
+    mlx5_del_flow_rules(handle);
+}
+EXPORT_SYMBOL(del_conntrack_mlx5_rule);
+
+
+void get_fc_query_count(struct mlx5_fc *counter, u64 *bytes, u64 *packets, u64 *lastuse)
+{
+    mlx5_fc_query_cached(counter, bytes, packets, lastuse);
+    return ;
+}
+EXPORT_SYMBOL(get_fc_query_count);
 
 void init_root_table(void)
 {

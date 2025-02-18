@@ -21,6 +21,10 @@ struct mlx5_rule_data {
     unsigned char dmac[6];
     struct net_device *in;
     struct net_device *out;
+    void **ft;
+    void **rule;
+    void **fc;
+    enum fastpath_status *status;
 };
 
 enum fastpath_status
@@ -35,17 +39,21 @@ struct nf_conn_fastpath {
     enum fastpath_status status[IP_CT_DIR_MAX];
     unsigned char dmac[IP_CT_DIR_MAX][6];
     int out_idx[IP_CT_DIR_MAX];
+    void *ft[IP_CT_DIR_MAX];
+    void *rule[IP_CT_DIR_MAX];
+    void *fc[IP_CT_DIR_MAX];
 };
 
 static inline struct nf_conn_fastpath *nf_ct_fastpath_ext_add(struct nf_conn *ct, gfp_t gfp)
 {
     return nf_ct_ext_add(ct, NF_CT_EXT_FASTPATH, gfp);
-};
+}
 
-static inline struct nf_conn_fastpath *nf_conn_fastpath_find(const struct nf_conn *ct)
+inline struct nf_conn_fastpath *nf_conn_fastpath_find(const struct nf_conn *ct)
 {
     return nf_ct_ext_find(ct, NF_CT_EXT_FASTPATH);
 }
+EXPORT_SYMBOL(nf_conn_fastpath_find);
 
 int xdp_fastpath(void *tuple, unsigned char* dmac, int *ifindex)
 {
@@ -79,6 +87,7 @@ int xdp_fastpath(void *tuple, unsigned char* dmac, int *ifindex)
 
     memcpy(dmac, fp->dmac[h->tuple.dst.dir], 6);
     *ifindex = fp->out_idx[h->tuple.dst.dir];
+    WRITE_ONCE(ct->timeout, nfct_time_stamp + (30 * HZ));
     // printk("dmac:%x%x%x%x%x%x ifindex:%d\n", dmac[0],dmac[1],dmac[2],dmac[3],dmac[4],dmac[5],*ifindex);
 
 no_match:
@@ -96,12 +105,17 @@ void dwork_add_conntrack_mlx5_rule(struct work_struct *work)
         data->sport, data->dport,
         data->protonum,
         data->dmac,
-        data->in, data->out
+        data->in, data->out,
+        data->ft, data->rule, data->fc
     );
 
     if (ret)
+    {
+        printk("add_conntrack_mlx5_rule faild set to XDP_FAST\n");
+        *(data->status) = XDP_FAST;
         return;
-
+    }
+    *(data->status) = MLX5_FAST;
     return;
 }
 
@@ -140,7 +154,8 @@ static unsigned int conntrack_fastpath(void *priv, struct sk_buff *skb, const st
         memcpy(fp->dmac[CTINFO2DIR(ctinfo)], neigh->ha, 6);
         fp->out_idx[CTINFO2DIR(ctinfo)] = state->out->ifindex;
         fp->status[CTINFO2DIR(ctinfo)] = XDP_FAST;
-        return NF_ACCEPT;
+
+        WRITE_ONCE(ct->timeout, nfct_time_stamp + (300 * HZ));
 
         struct mlx5_rule_data *data = kmalloc(sizeof(struct mlx5_rule_data), GFP_KERNEL);
         data->sip = ct->tuplehash[CTINFO2DIR(ctinfo)].tuple.src.u3.ip;
@@ -151,6 +166,10 @@ static unsigned int conntrack_fastpath(void *priv, struct sk_buff *skb, const st
         memcpy(data->dmac, neigh->ha, 6);
         data->in = state->in;
         data->out = state->out;
+        data->ft = &fp->ft[CTINFO2DIR(ctinfo)];
+        data->fc = &fp->fc[CTINFO2DIR(ctinfo)];
+        data->rule = &fp->rule[CTINFO2DIR(ctinfo)];
+        data->status = &fp->status[CTINFO2DIR(ctinfo)];
 
         INIT_DELAYED_WORK(&data->work, dwork_add_conntrack_mlx5_rule);
         fp->status[CTINFO2DIR(ctinfo)] = TRY_MLX5;
